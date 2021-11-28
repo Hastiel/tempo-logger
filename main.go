@@ -1,146 +1,100 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math/rand"
-	"net/http"
-	"os"
 	"strconv"
 	"strings"
+	"tempo-loger/pkg/enviroment"
 	"tempo-loger/pkg/jira"
-
-	//"tempo-loger/pkg/user"
 	"time"
-
-	"github.com/joho/godotenv"
 )
 
-type CreateRq struct {
-	BillableSeconds  int    `json:"billableSeconds"`
-	Comment          string `json:"comment"`
-	EndDate          string `json:"endDate"`
-	Started          string `json:"started"`
-	OriginTaskId     string `json:"originTaskId"`
-	TimeSpentSeconds int    `json:"timeSpentSeconds"`
-	Worker           string `json:"worker"`
-}
-
 func main() {
-	err := godotenv.Load()
+	env, err := enviroment.NewEnviroment()
 	if err != nil {
 		log.Println("Error while loading .env file")
+		log.Println(err)
+		return
 	}
 
-	targetSpentSeconds := 8 * 60 * 60
+	jiraClient := jira.New(env.Login, env.Password, env.JiraUrl, env.JiraTempoFindsUri, env.JiraTempoUserkeyUri, env.JiraTempoCreatesUri, env.JiraTempoDaysSearch)
 
-	jiraUrl := os.Getenv("JIRA_URL")
-	jiraTempoCreatesUri := os.Getenv("JIRA_TEMPO_CREATES_URI")
-	jiraTempoFindsUri := os.Getenv("JIRA_TEMPO_FINDS_URI")
-	jiraTempoUserkeyUri := os.Getenv("JIRA_TEMPO_USERKEY_URI")
-	//jiraUserKey := os.Getenv("JIRA_USER_KEY")
-	login := os.Getenv("LOGIN")
-	password := os.Getenv("PASSWORD")
-	worklog := os.Getenv("WORKLOG")
-
-	//user := user.NewUser(jiraUrl, login, password)
-
-	// user := user.NewUser(jiraUrl, login, password)
-
-	jiraUserKey, err := jira.GetJiraUserKey(login, password, jiraUrl, jiraTempoUserkeyUri)
+	daysRs, err := jiraClient.GetDayInfo(time.Now())
 	if err != nil {
-		log.Println("Error while sending GetJiraUserKey-request")
+		log.Println("Error while sending GetDayInfo-request")
+		fmt.Println(err)
+		return
 	}
 
-	worklogs := strings.Split(worklog, ";")
+	if daysRs[0].Days[0].Type != "WORKING_DAY" {
+		log.Println("Today is not-working day!")
+		return
+	}
+	targetSpentSeconds := daysRs[0].Days[0].RequiredSeconds
 
-	year, month, day := time.Now().Date()
-	currentDate := fmt.Sprintf("%d-%d-%d", year, month, day)
-
-	findsRs, err := jira.Find(login, password, jiraUserKey, jiraUrl, jiraTempoFindsUri)
+	findsRs, err := jiraClient.Find(time.Now())
 	if err != nil {
 		log.Println("Error while sending Finds-request")
+		fmt.Println(err)
+		return
 	}
 
-	totalSpentSeconds := 0
-	for i := 0; i < len(findsRs); i++ {
-		//var item tempo_worklog.FindsItem = findsRs
-		totalSpentSeconds += findsRs[i].TimeSpentSeconds
+	var totalSpentSeconds int
+	for _, f := range findsRs {
+		totalSpentSeconds += f.TimeSpentSeconds
 	}
 
 	fmt.Println(totalSpentSeconds)
 
-	for i := 0; i < len(worklogs); i++ {
+	worklogs := strings.Split(env.Worklog, ";")
+	for i, worklog := range worklogs {
+
 		if totalSpentSeconds < targetSpentSeconds {
 			randomSeconds := 0
 			neededSpentSeconds := targetSpentSeconds - totalSpentSeconds
 			if i < len(worklogs)-1 {
-				min, max := 1, neededSpentSeconds/60/60
-				rand.Seed(time.Now().UnixNano())
-				if max-min <= 0 {
-					randomSeconds = 1 * 60 * 60
-				} else {
-					randomSeconds = (rand.Intn(max-min) + min) * 60 * 60
-				}
+				randomSeconds = generateRandomInt(neededSpentSeconds)
 			}
-			currentWorklog := strings.Split(worklogs[i], ",")
+			currentWorklog := strings.Split(worklog, ",")
 
 			origanalTaskId := strings.TrimSpace(currentWorklog[0])
-			envTimeSpendHours, err := strconv.Atoi(strings.TrimSpace(currentWorklog[1]))
+			comment := strings.TrimSpace(currentWorklog[2])
+			envTimeSpentHours, err := strconv.Atoi(strings.TrimSpace(currentWorklog[1]))
 			if err != nil {
 				log.Printf("Error while convert hours to int from .env file")
+				return
 			}
-			envTimeSpendSeconds := envTimeSpendHours * 60 * 60
-			var timeSpendSeconds int
-			if i == len(worklogs)-1 {
-				timeSpendSeconds = neededSpentSeconds
-			} else if randomSeconds > envTimeSpendSeconds {
-				timeSpendSeconds = envTimeSpendSeconds
-			} else {
-				timeSpendSeconds = randomSeconds
-			}
-			comment := strings.TrimSpace(currentWorklog[2])
+			envTimeSpentSeconds := envTimeSpentHours * 60 * 60
+			timeSpentSeconds := chooceAvaliableSecondsToSpent(i, len(worklogs), neededSpentSeconds, randomSeconds, envTimeSpentSeconds)
 
-			createRq := CreateRq{
-				BillableSeconds:  timeSpendSeconds,
-				Comment:          comment,
-				EndDate:          currentDate,
-				Started:          currentDate,
-				OriginTaskId:     origanalTaskId,
-				TimeSpentSeconds: timeSpendSeconds,
-				Worker:           jiraUserKey,
+			if err := jiraClient.Create(comment, origanalTaskId, time.Now(), timeSpentSeconds); err != nil {
+				log.Println(err)
+				return
 			}
 
-			body, err := json.Marshal(createRq)
-			if err != nil {
-				log.Printf("Error while deserialize CreateWorklog")
-			}
-
-			url := fmt.Sprintf("%s/%s", jiraUrl, jiraTempoCreatesUri)
-			req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(string(body)))
-			if err != nil {
-				fmt.Println("Error!")
-			}
-
-			req.Header.Add("Content-Type", "application/json")
-			req.SetBasicAuth(login, password)
-			hc := &http.Client{}
-			res, err := hc.Do(req)
-			if err != nil {
-				fmt.Println("Error!")
-			}
-
-			data, err := ioutil.ReadAll(res.Body)
-			if err != nil {
-				fmt.Println("Error!")
-			}
-			fmt.Println(string(data))
-
-			totalSpentSeconds += timeSpendSeconds
-
+			totalSpentSeconds += timeSpentSeconds
 		}
 	}
+}
 
+func generateRandomInt(neededSpentSeconds int) int {
+	min, max := 1, neededSpentSeconds/60/60
+	rand.Seed(time.Now().UnixNano())
+	if max-min <= 0 {
+		return 1 * 60 * 60
+	} else {
+		return (rand.Intn(max-min) + min) * 60 * 60
+	}
+}
+
+func chooceAvaliableSecondsToSpent(i, length, neededSpentSeconds, randomSeconds, envTimeSpentSeconds int) int {
+	if i == length-1 {
+		return neededSpentSeconds
+	} else if randomSeconds > envTimeSpentSeconds {
+		return envTimeSpentSeconds
+	} else {
+		return randomSeconds
+	}
 }
