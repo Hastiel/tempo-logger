@@ -14,7 +14,7 @@ import (
 
 type JiraClient interface {
 	Find(date time.Time) (FindsRs, error)
-	Create(comment, origanalTaskId string, currentDate time.Time, timeSpentSeconds int) error
+	Create(comment, originalTaskId string, currentDate time.Time, timeSpentSeconds int) error
 	GetDayInfo(date time.Time) (DaysSearchRs, error)
 }
 
@@ -41,7 +41,7 @@ func New(login, pwd, host, findPath, keyPath, createPath, daysPath string) JiraC
 	}
 }
 
-func (j *jiraClient) Create(comment, origanalTaskId string, currentDate time.Time, timeSpentSeconds int) error {
+func (j *jiraClient) Create(comment, originalTaskId string, currentDate time.Time, timeSpentSeconds int) error {
 	key, err := j.getUserKey()
 	if err != nil {
 		return err
@@ -54,7 +54,7 @@ func (j *jiraClient) Create(comment, origanalTaskId string, currentDate time.Tim
 		Comment:          comment,
 		EndDate:          dateStr,
 		Started:          dateStr,
-		OriginTaskId:     origanalTaskId,
+		OriginTaskId:     originalTaskId,
 		TimeSpentSeconds: timeSpentSeconds,
 		Worker:           key,
 	}
@@ -64,8 +64,8 @@ func (j *jiraClient) Create(comment, origanalTaskId string, currentDate time.Tim
 		return err
 	}
 
-	url := fmt.Sprintf("%s/%s", j.host, j.createPath)
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(body))
+	rqUrl := fmt.Sprintf("%s/%s", j.host, j.createPath)
+	req, err := http.NewRequest(http.MethodPost, rqUrl, bytes.NewBuffer(body))
 	if err != nil {
 		return err
 	}
@@ -110,8 +110,8 @@ func (j *jiraClient) Find(date time.Time) (FindsRs, error) {
 		return nil, err
 	}
 
-	url := fmt.Sprintf("%s/%s", j.host, j.findPath)
-	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(string(body)))
+	rqUrl := fmt.Sprintf("%s/%s", j.host, j.findPath)
+	req, err := http.NewRequest(http.MethodPost, rqUrl, strings.NewReader(string(body)))
 	if err != nil {
 		return nil, err
 	}
@@ -157,8 +157,8 @@ func (j *jiraClient) GetDayInfo(date time.Time) (DaysSearchRs, error) {
 		return rsStruct, err
 	}
 
-	url := fmt.Sprintf("%s/%s", j.host, j.daysPath)
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(body))
+	rqUrl := fmt.Sprintf("%s/%s", j.host, j.daysPath)
+	req, err := http.NewRequest(http.MethodPost, rqUrl, bytes.NewBuffer(body))
 	if err != nil {
 		return rsStruct, err
 	}
@@ -190,9 +190,9 @@ func (j *jiraClient) getUserKey() (string, error) {
 
 	params := url.Values{}
 	params.Add("username", j.login)
-	url := fmt.Sprintf("%s/%s?%s", j.host, j.keyPath, params.Encode())
+	rqUrl := fmt.Sprintf("%s/%s?%s", j.host, j.keyPath, params.Encode())
 
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequest(http.MethodGet, rqUrl, nil)
 	if err != nil {
 		return "", err
 	}
