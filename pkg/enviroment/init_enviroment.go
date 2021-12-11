@@ -10,12 +10,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-type LocalEnv interface {
-	//Init() (enviroment, error)
-	//validate() error
-}
-
-type enviroment struct {
+type environment struct {
 	JiraUrl             string
 	JiraTempoCreatesUri string
 	JiraTempoFindsUri   string
@@ -26,7 +21,7 @@ type enviroment struct {
 	Worklog             string
 }
 
-func NewEnviroment() (*enviroment, error) {
+func NewEnvironment() (*environment, error) {
 	env, err := readEnv()
 
 	if err != nil {
@@ -42,13 +37,13 @@ func NewEnviroment() (*enviroment, error) {
 	return env, nil
 }
 
-func readEnv() (*enviroment, error) {
+func readEnv() (*environment, error) {
 	err := godotenv.Load()
 	if err != nil {
 		return nil, err
 	}
 
-	env := &enviroment{
+	env := &environment{
 		strings.TrimSpace(os.Getenv("JIRA_URL")),
 		strings.TrimSpace(os.Getenv("JIRA_TEMPO_CREATES_URI")),
 		strings.TrimSpace(os.Getenv("JIRA_TEMPO_FINDS_URI")),
@@ -62,7 +57,7 @@ func readEnv() (*enviroment, error) {
 	return env, nil
 }
 
-func validate(env *enviroment) error {
+func validate(env *environment) error {
 	if "" == env.JiraUrl {
 		return errors.New(genEnvErrMessage("JIRA_URL"))
 	}
@@ -109,7 +104,7 @@ func validateWorklogItems(worklog string) error {
 		}
 		for _, workItem := range work {
 			if "" == strings.TrimSpace(workItem) {
-				return errors.New("Items in \"WORKLOG\" shuld not be empty!")
+				return errors.New("Items in \"WORKLOG\" should not be empty!")
 			}
 		}
 	}

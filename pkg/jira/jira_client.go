@@ -202,7 +202,7 @@ func (j *jiraClient) getUserKey() (string, error) {
 	hc := &http.Client{}
 	res, err := hc.Do(req)
 	if err != nil {
-		fmt.Println("Error!")
+		return "", err
 	}
 
 	data, err := ioutil.ReadAll(res.Body)
