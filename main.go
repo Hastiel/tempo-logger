@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"math"
 	"math/rand"
 	"os"
 	"strconv"
@@ -14,10 +15,16 @@ import (
 
 func main() {
 	logFile, err := os.OpenFile(fmt.Sprintf("%s.log", time.Now().Format("2006-01")), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	rand.Seed(time.Now().UnixNano())
 	if err != nil {
 		log.Fatal("Error while init .log file: ", err)
 	}
-	defer logFile.Close()
+	defer func(logFile *os.File) {
+		err := logFile.Close()
+		if err != nil {
+
+		}
+	}(logFile)
 	log.SetOutput(logFile)
 
 	env, err := enviroment.NewEnvironment()
@@ -56,7 +63,7 @@ func main() {
 			randomSeconds := 0
 			neededSpentSeconds := targetSpentSeconds - totalSpentSeconds
 			if i < len(worklogs)-1 {
-				randomSeconds = generateRandomInt(neededSpentSeconds)
+				randomSeconds = roundSecondsToHoursInt(generateRandomInt(neededSpentSeconds))
 			}
 			currentWorklog := strings.Split(worklog, ",")
 
@@ -82,12 +89,16 @@ func main() {
 }
 
 func generateRandomInt(neededSpentSeconds int) int {
-	min, max := 1, neededSpentSeconds/60/60
 	rand.Seed(time.Now().UnixNano())
-	if max-min <= 0 {
-		return 1 * 60 * 60
+	return rand.Intn(neededSpentSeconds)
+}
+
+func roundSecondsToHoursInt(seconds int) int {
+	r := math.Round(float64(seconds) / 60 / 60)
+	if r == 0 {
+		return 1
 	} else {
-		return (rand.Intn(max-min) + min) * 60 * 60
+		return int(r)
 	}
 }
 
