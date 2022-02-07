@@ -15,7 +15,6 @@ import (
 
 func main() {
 	logFile, err := os.OpenFile(fmt.Sprintf("%s.log", time.Now().Format("2006-01")), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
-	rand.Seed(time.Now().UnixNano())
 	if err != nil {
 		log.Fatal("Error while init .log file: ", err)
 	}
@@ -57,15 +56,17 @@ func main() {
 	log.Printf("Already spent time = %dsec (%d hours)", totalSpentSeconds, totalSpentSeconds/60/60)
 
 	worklogs := strings.Split(env.Worklog, ";")
-	for i, worklog := range worklogs {
 
+	r := rand.New(rand.NewSource(time.Now().Unix()))
+	counter := 0
+	for _, i := range r.Perm(len(worklogs)) {
 		if totalSpentSeconds < targetSpentSeconds {
 			randomSeconds := 0
 			neededSpentSeconds := targetSpentSeconds - totalSpentSeconds
-			if i < len(worklogs)-1 {
-				randomSeconds = roundSecondsToHoursInt(generateRandomInt(neededSpentSeconds))
+			if counter < len(worklogs)-1 {
+				randomSeconds = generateRandomInt(neededSpentSeconds)
 			}
-			currentWorklog := strings.Split(worklog, ",")
+			currentWorklog := strings.Split(worklogs[i], ",")
 
 			originalTaskId := strings.TrimSpace(currentWorklog[0])
 			comment := strings.TrimSpace(currentWorklog[2])
@@ -73,8 +74,8 @@ func main() {
 			if err != nil {
 				log.Fatal("Error while convert hours to int from .env file: ", err)
 			}
-			envTimeSpentSeconds := envTimeSpentHours * 60 * 60
-			timeSpentSeconds := choiceAvailableSecondsToSpent(i, len(worklogs), neededSpentSeconds, randomSeconds, envTimeSpentSeconds)
+			envTimeSpentSeconds := convertHoursToSeconds(envTimeSpentHours)
+			timeSpentSeconds := roundAdnChoiceAvailableSecondsToSpent(counter, len(worklogs), neededSpentSeconds, randomSeconds, envTimeSpentSeconds)
 
 			if err := jiraClient.Create(comment, originalTaskId, time.Now(), timeSpentSeconds); err != nil {
 				log.Fatal("Error while execute Create: ", err)
@@ -82,8 +83,10 @@ func main() {
 			log.Printf("Successful logged: task id = %s, comment = %s, spent time = %dsec (%d hours)", originalTaskId, comment, timeSpentSeconds, timeSpentSeconds/60/60)
 
 			totalSpentSeconds += timeSpentSeconds
+			counter++
 		} else {
 			log.Println("Excellent day! All time has already been spent")
+			break
 		}
 	}
 }
@@ -93,21 +96,26 @@ func generateRandomInt(neededSpentSeconds int) int {
 	return rand.Intn(neededSpentSeconds)
 }
 
-func roundSecondsToHoursInt(seconds int) int {
-	r := math.Round(float64(seconds) / 60 / 60)
-	if r == 0 {
-		return 1
+func roundAdnChoiceAvailableSecondsToSpent(i, length, neededSpentSeconds, randomSeconds, envTimeSpentSeconds int) int {
+	roundedHours := convertSecondsToHours(randomSeconds)
+	if roundedHours == 0 {
+		roundedHours = 1
+	}
+	seconds := convertHoursToSeconds(roundedHours)
+	if i == length-1 {
+		return neededSpentSeconds
+	} else if seconds > envTimeSpentSeconds {
+		return envTimeSpentSeconds
 	} else {
-		return int(r)
+		return seconds
 	}
 }
 
-func choiceAvailableSecondsToSpent(i, length, neededSpentSeconds, randomSeconds, envTimeSpentSeconds int) int {
-	if i == length-1 {
-		return neededSpentSeconds
-	} else if randomSeconds > envTimeSpentSeconds {
-		return envTimeSpentSeconds
-	} else {
-		return randomSeconds
-	}
+func convertSecondsToHours(val int) int {
+	rounded := math.Round(float64(val) / 60 / 60)
+	return int(rounded)
+}
+
+func convertHoursToSeconds(val int) int {
+	return val * 60 * 60
 }
