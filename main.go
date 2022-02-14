@@ -31,6 +31,11 @@ func main() {
 		log.Fatal("Error while loading .env file: ", err)
 	}
 
+	if "true" == env.OutlookLoggingEnabled {
+		//outlookClient := outlook.New(env.Login, env.Password, env.OutlookUrl, env.OutlookEventPath)
+		//events, err := outlookClient.GetEvents()
+	}
+
 	jiraClient := jira.New(env.Login, env.Password, env.JiraUrl, env.JiraTempoFindsUri, env.JiraTempoUserkeyUri, env.JiraTempoCreatesUri, env.JiraTempoDaysSearch)
 
 	daysRs, err := jiraClient.GetDayInfo(time.Now())

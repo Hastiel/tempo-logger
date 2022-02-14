@@ -11,14 +11,18 @@ import (
 )
 
 type environment struct {
-	JiraUrl             string
-	JiraTempoCreatesUri string
-	JiraTempoFindsUri   string
-	JiraTempoUserkeyUri string
-	JiraTempoDaysSearch string
-	Login               string
-	Password            string
-	Worklog             string
+	JiraUrl               string
+	JiraTempoCreatesUri   string
+	JiraTempoFindsUri     string
+	JiraTempoUserkeyUri   string
+	JiraTempoDaysSearch   string
+	Login                 string
+	Password              string
+	Worklog               string
+	OutlookLoggingEnabled string
+	OutlookUrl            string
+	OutlookEventPath      string
+	OutlookDefaultTask    string
 }
 
 func NewEnvironment() (*environment, error) {
@@ -52,6 +56,10 @@ func readEnv() (*environment, error) {
 		strings.TrimSpace(os.Getenv("LOGIN")),
 		strings.TrimSpace(os.Getenv("PASSWORD")),
 		strings.TrimSpace(os.Getenv("WORKLOG")),
+		strings.TrimSpace(os.Getenv("OUTLOOK_LOGGING_ENABLED")),
+		strings.TrimSpace(os.Getenv("OUTLOOK_URL")),
+		strings.TrimSpace(os.Getenv("OUTLOOK_EVENT_URI")),
+		strings.TrimSpace(os.Getenv("OUTLOOK_DEFAULT_TASK_FOR_LOGGING")),
 	}
 
 	return env, nil
@@ -81,6 +89,17 @@ func validate(env *environment) error {
 	}
 	if "" == env.Worklog {
 		return errors.New(genEnvErrMessage("WORKLOG"))
+	}
+	if "" == env.OutlookLoggingEnabled {
+		return errors.New(genEnvErrMessage("OUTLOOK_LOGGING_ENABLED"))
+	}
+	if "" == env.OutlookUrl {
+		return errors.New(genEnvErrMessage("OUTLOOK_URL"))
+
+	}
+	if "" == env.OutlookEventPath {
+		return errors.New(genEnvErrMessage("OUTLOOK_EVENT_URI"))
+
 	} else {
 		err := validateWorklogItems(env.Worklog)
 		if err != nil {

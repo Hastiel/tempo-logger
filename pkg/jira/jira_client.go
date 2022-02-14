@@ -84,7 +84,7 @@ func (j *jiraClient) Create(comment, originalTaskId string, currentDate time.Tim
 	}
 
 	if res.StatusCode >= 400 {
-		return fmt.Errorf("Unknown error: %s", string(data))
+		return fmt.Errorf("unknown error: %s", string(data))
 	}
 
 	return nil
