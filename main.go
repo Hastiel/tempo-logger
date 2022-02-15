@@ -10,6 +10,7 @@ import (
 	"strings"
 	"tempo-loger/pkg/enviroment"
 	"tempo-loger/pkg/jira"
+	"tempo-loger/pkg/outlook"
 	"time"
 )
 
@@ -31,9 +32,21 @@ func main() {
 		log.Fatal("Error while loading .env file: ", err)
 	}
 
+	var outlookEvents outlook.EventsRs
 	if "true" == env.OutlookLoggingEnabled {
-		//outlookClient := outlook.New(env.Login, env.Password, env.OutlookUrl, env.OutlookEventPath)
-		//events, err := outlookClient.GetEvents()
+		outlookClient := outlook.New(env.Login, env.Password, env.OutlookUrl, env.OutlookEventPath)
+		startDate, err := concatCurrantDateWithTime("00:00:00")
+		if err != nil {
+			log.Fatal("Cannot parse startDateTime for outlook events: ", err)
+		}
+		endDate, err := concatCurrantDateWithTime("23:59:59")
+		if err != nil {
+			log.Fatal("Cannot parse endDateTime for outlook events: ", err)
+		}
+		outlookEvents, err = outlookClient.GetEvents(startDate, endDate)
+		if err != nil {
+			log.Fatal("Error while getting outlook events: ", err)
+		}
 	}
 
 	jiraClient := jira.New(env.Login, env.Password, env.JiraUrl, env.JiraTempoFindsUri, env.JiraTempoUserkeyUri, env.JiraTempoCreatesUri, env.JiraTempoDaysSearch)
@@ -66,6 +79,24 @@ func main() {
 	counter := 0
 	for _, i := range r.Perm(len(worklogs)) {
 		if totalSpentSeconds < targetSpentSeconds {
+			if len(outlookEvents.Value) > 0 {
+				for _, val := range outlookEvents.Value {
+					startDate, err := time.Parse("2006-01-02T15:04:05", val.Start.DateTime)
+					if err != nil {
+						log.Fatal("Error while parse startDate in outlookEventRs: ", err)
+					}
+					endDate, err := time.Parse("2006-01-02T15:04:05", val.End.DateTime)
+					if err != nil {
+						log.Fatal("Error while parse endDate in outlookEventRs: ", err)
+					}
+					ev := endDate.Unix() - startDate.Unix()
+					if err := jiraClient.Create(fmt.Sprintf("Участие во встрече \"%s\"", val.Subject), env.OutlookDefaultTask, time.Now(), int(ev)); err != nil {
+						log.Fatal("Error while execute Create: ", err)
+					}
+					totalSpentSeconds += int(ev)
+				}
+				log.Fatal("Ha-Ha-Ha")
+			}
 			randomSeconds := 0
 			neededSpentSeconds := targetSpentSeconds - totalSpentSeconds
 			if counter < len(worklogs)-1 {
@@ -123,4 +154,13 @@ func convertSecondsToHours(val int) int {
 
 func convertHoursToSeconds(val int) int {
 	return val * 60 * 60
+}
+
+func concatCurrantDateWithTime(timeVal string) (time.Time, error) {
+	year, month, day := time.Now().Date()
+	dateTime, err := time.Parse("2 January 2006 15:04:05", fmt.Sprintf("%d %s %d %s", day, month, year, timeVal))
+	if err != nil {
+		return time.Time{}, err
+	}
+	return dateTime, nil
 }
