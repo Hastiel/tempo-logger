@@ -10,7 +10,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-type environment struct {
+type Environment struct {
 	JiraUrl               string
 	JiraTempoCreatesUri   string
 	JiraTempoFindsUri     string
@@ -25,7 +25,7 @@ type environment struct {
 	OutlookDefaultTask    string
 }
 
-func NewEnvironment() (*environment, error) {
+func NewEnvironment() (*Environment, error) {
 	env, err := readEnv()
 
 	if err != nil {
@@ -41,13 +41,13 @@ func NewEnvironment() (*environment, error) {
 	return env, nil
 }
 
-func readEnv() (*environment, error) {
+func readEnv() (*Environment, error) {
 	err := godotenv.Load()
 	if err != nil {
 		return nil, err
 	}
 
-	env := &environment{
+	env := &Environment{
 		strings.TrimSpace(os.Getenv("JIRA_URL")),
 		strings.TrimSpace(os.Getenv("JIRA_TEMPO_CREATES_URI")),
 		strings.TrimSpace(os.Getenv("JIRA_TEMPO_FINDS_URI")),
@@ -65,7 +65,7 @@ func readEnv() (*environment, error) {
 	return env, nil
 }
 
-func validate(env *environment) error {
+func validate(env *Environment) error {
 	if "" == env.JiraUrl {
 		return errors.New(genEnvErrMessage("JIRA_URL"))
 	}

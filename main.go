@@ -47,6 +47,7 @@ func main() {
 		if err != nil {
 			log.Fatal("Error while getting outlook events: ", err)
 		}
+		process(env)
 	}
 
 	jiraClient := jira.New(env.Login, env.Password, env.JiraUrl, env.JiraTempoFindsUri, env.JiraTempoUserkeyUri, env.JiraTempoCreatesUri, env.JiraTempoDaysSearch)
