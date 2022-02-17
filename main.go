@@ -96,7 +96,7 @@ func main() {
 					}
 					totalSpentSeconds += int(ev)
 				}
-				log.Fatal("Ha-Ha-Ha")
+				//log.Fatal("Ha-Ha-Ha")
 			}
 			randomSeconds := 0
 			neededSpentSeconds := targetSpentSeconds - totalSpentSeconds

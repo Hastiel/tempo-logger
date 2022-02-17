@@ -35,14 +35,10 @@ func process(env *enviroment.Environment) error {
 func prepare(outlookEvents outlook.EventsRs, env enviroment.Environment) ([]jira.CreateParams, error) {
 	var createParams []jira.CreateParams
 	if len(outlookEvents.Value) > 0 {
-		for i, val := range outlookEvents.Value {
+		for _, val := range outlookEvents.Value {
 			jiraTicket := service.ExtractTicketFromBody(val.Body.Content, env.JiraUrl)
 			if "" == jiraTicket {
-				if "" == env.OutlookDefaultTask {
-					break
-				} else {
-					jiraTicket = env.OutlookDefaultTask
-				}
+				jiraTicket = env.OutlookDefaultTask
 			}
 			startDate, err := service.ExtractDateTime(val.Start.DateTime)
 			if err != nil {
@@ -53,12 +49,14 @@ func prepare(outlookEvents outlook.EventsRs, env enviroment.Environment) ([]jira
 				return nil, err
 			}
 			ev := endDate.Unix() - startDate.Unix()
-			createParams[i].EndDate = endDate
-			createParams[i].Started = startDate
-			createParams[i].Comment = fmt.Sprintf("Участие во встрече \"%s\"", val.Subject)
-			createParams[i].BillableSeconds = int(ev)
-			createParams[i].TimeSpentSeconds = int(ev)
-			createParams[i].OriginTaskId = jiraTicket
+			createParams = append(createParams, jira.CreateParams{
+				BillableSeconds:  int(ev),
+				Comment:          fmt.Sprintf("Участие во встрече \"%s\"", val.Subject),
+				EndDate:          endDate,
+				Started:          startDate,
+				OriginTaskId:     jiraTicket,
+				TimeSpentSeconds: int(ev),
+			})
 		}
 	}
 	return createParams, nil

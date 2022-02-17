@@ -11,7 +11,7 @@ func ExtractTicketFromBody(body, jiraUrl string) string {
 	urlWithPath := fmt.Sprintf("%s/browse/", jiraUrl)
 	pattern := regexp.MustCompile(fmt.Sprintf("(%s)([aA-zZ]{1,10}-\\d{1,6})", urlWithPath))
 	s := pattern.FindString(body)
-	return strings.TrimSuffix(s, urlWithPath)
+	return strings.TrimPrefix(s, urlWithPath)
 }
 
 func ExtractDateTime(val string) (time.Time, error) {
