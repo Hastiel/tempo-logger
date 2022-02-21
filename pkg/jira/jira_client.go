@@ -14,7 +14,7 @@ import (
 
 type JiraClient interface {
 	Find(date time.Time) (FindsRs, error)
-	Create(comment, originalTaskId string, currentDate time.Time, timeSpentSeconds int) error
+	Create(params CreateParams) error
 	GetDayInfo(date time.Time) (DaysSearchRs, error)
 }
 
@@ -29,6 +29,8 @@ type jiraClient struct {
 	daysPath   string
 }
 
+const dateLayout = "2006-01-02"
+
 func New(login, pwd, host, findPath, keyPath, createPath, daysPath string) JiraClient {
 	return &jiraClient{
 		login:      login,
@@ -41,21 +43,19 @@ func New(login, pwd, host, findPath, keyPath, createPath, daysPath string) JiraC
 	}
 }
 
-func (j *jiraClient) Create(comment, originalTaskId string, currentDate time.Time, timeSpentSeconds int) error {
+func (j *jiraClient) Create(params CreateParams) error {
 	key, err := j.getUserKey()
 	if err != nil {
 		return err
 	}
 
-	dateStr := currentDate.Format("2006-01-02")
-
 	rqStruct := CreateRq{
-		BillableSeconds:  timeSpentSeconds,
-		Comment:          comment,
-		EndDate:          dateStr,
-		Started:          dateStr,
-		OriginTaskId:     originalTaskId,
-		TimeSpentSeconds: timeSpentSeconds,
+		BillableSeconds:  params.BillableSeconds,
+		Comment:          params.Comment,
+		EndDate:          params.EndDate.Format(dateLayout),
+		Started:          params.Started.Format(dateLayout),
+		OriginTaskId:     params.OriginTaskId,
+		TimeSpentSeconds: params.TimeSpentSeconds,
 		Worker:           key,
 	}
 
@@ -95,9 +95,7 @@ func (j *jiraClient) Find(date time.Time) (FindsRs, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	dateStr := date.Format("2006-01-02")
-
+	dateStr := date.Format(dateLayout)
 	findsRq := FindsRq{
 		From:   dateStr,
 		To:     dateStr,
@@ -145,7 +143,7 @@ func (j *jiraClient) GetDayInfo(date time.Time) (DaysSearchRs, error) {
 		return rsStruct, err
 	}
 
-	dateStr := date.Format("2006-01-02")
+	dateStr := date.Format(dateLayout)
 	rqStruct := DaysSearchRq{
 		From:     dateStr,
 		To:       dateStr,

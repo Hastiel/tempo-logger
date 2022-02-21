@@ -7,9 +7,10 @@ import (
 	"tempo-loger/pkg/jira"
 	"tempo-loger/pkg/outlook"
 	"tempo-loger/pkg/service"
+	"time"
 )
 
-func process(env *enviroment.Environment) error {
+func process(env *enviroment.Environment, createParams *[]jira.CreateParams) error {
 	outlookClient := outlook.New(env.Login, env.Password, env.OutlookUrl, env.OutlookEventPath)
 	startDate, err := concatCurrantDateWithTime("00:00:00")
 	if err != nil {
@@ -23,17 +24,13 @@ func process(env *enviroment.Environment) error {
 	if err != nil {
 		log.Fatal("Error while getting outlook events: ", err)
 	}
-
-	createParams, err := prepare(outlookEvents, *env)
-	if err != nil {
+	if err := prepare(outlookEvents, *env, createParams); err != nil {
 		return err
 	}
-	log.Printf(createParams[0].OriginTaskId)
 	return nil
 }
 
-func prepare(outlookEvents outlook.EventsRs, env enviroment.Environment) ([]jira.CreateParams, error) {
-	var createParams []jira.CreateParams
+func prepare(outlookEvents outlook.EventsRs, env enviroment.Environment, createParams *[]jira.CreateParams) error {
 	if len(outlookEvents.Value) > 0 {
 		for _, val := range outlookEvents.Value {
 			jiraTicket := service.ExtractTicketFromBody(val.Body.Content, env.JiraUrl)
@@ -42,22 +39,31 @@ func prepare(outlookEvents outlook.EventsRs, env enviroment.Environment) ([]jira
 			}
 			startDate, err := service.ExtractDateTime(val.Start.DateTime)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			endDate, err := service.ExtractDateTime(val.End.DateTime)
 			if err != nil {
-				return nil, err
+				return err
 			}
-			ev := endDate.Unix() - startDate.Unix()
-			createParams = append(createParams, jira.CreateParams{
-				BillableSeconds:  int(ev),
+			eventDuration := endDate.Unix() - startDate.Unix()
+			*createParams = append(*createParams, jira.CreateParams{
+				BillableSeconds:  int(eventDuration),
 				Comment:          fmt.Sprintf("Участие во встрече \"%s\"", val.Subject),
 				EndDate:          endDate,
 				Started:          startDate,
 				OriginTaskId:     jiraTicket,
-				TimeSpentSeconds: int(ev),
+				TimeSpentSeconds: int(eventDuration),
 			})
 		}
 	}
-	return createParams, nil
+	return nil
+}
+
+func concatCurrantDateWithTime(timeVal string) (time.Time, error) {
+	year, month, day := time.Now().Date()
+	dateTime, err := time.Parse("2 January 2006 15:04:05", fmt.Sprintf("%d %s %d %s", day, month, year, timeVal))
+	if err != nil {
+		return time.Time{}, err
+	}
+	return dateTime, nil
 }

@@ -44,7 +44,7 @@ func (o *outlookClient) GetEvents(startDate, endDate time.Time) (EventsRs, error
 		},
 	}
 
-	req, _ := http.NewRequest("GET", url, nil)
+	req, _ := http.NewRequest(http.MethodGet, url, nil)
 	req.SetBasicAuth(o.login, o.pwd)
 	res, err := client.Do(req)
 	if err != nil {
