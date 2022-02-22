@@ -17,7 +17,9 @@ go build
     2. LOGIN, PASSWORD - jira account for time logging
     3. OUTLOOK_LOGGING_ENABLED - if _true_ then parse outlook events
     4. OUTLOOK_URL - outlook api root url <span style="color: green">For example https://mail.organization.com </span>
-    5. OUTLOOK_DEFAULT_TASK_FOR_LOGGING - the default task to log Outlook events if the ticket cannot be found in the body of the event. If empty, the event without a ticket will be skipped <span style="color: green">For example RFS-123 </span>
+    5. OUTLOOK_DEFAULT_TASK_FOR_LOGGING - the default task to log Outlook events if the ticket cannot be found in the
+       body of the event. If empty, the event without a ticket will be skipped <span style="color: green">For example
+       RFS-123 </span>
     6. WORKLOG - an array of jira worklogs. <span style="color: green">For example: RFS-123,5,code review; INC-2,3,bug
        fixing</span>
         1. <jira_ticket> - Required field. Ticket from jira.
