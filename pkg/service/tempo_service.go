@@ -4,6 +4,7 @@ import (
 	"log"
 	"strings"
 	"tempo-loger/pkg/jira"
+	"time"
 )
 
 func ProcessParams(totalSpentSeconds, targetSpentSeconds int, client jira.JiraClient, params []jira.CreateParams) error {
@@ -14,7 +15,7 @@ func ProcessParams(totalSpentSeconds, targetSpentSeconds int, client jira.JiraCl
 				continue
 			}
 			neededSpentSeconds := targetSpentSeconds - totalSpentSeconds
-			timeSpentSeconds := roundAdnChoiceAvailableSecondsToSpent(y, len(params), neededSpentSeconds, param.TimeSpentSeconds)
+			timeSpentSeconds := choiceAvailableSecondsToSpent(y, len(params), neededSpentSeconds, param.TimeSpentSeconds)
 			param.BillableSeconds = timeSpentSeconds
 			param.TimeSpentSeconds = timeSpentSeconds
 			if err := client.Create(param); err != nil {
@@ -31,8 +32,30 @@ func ProcessParams(totalSpentSeconds, targetSpentSeconds int, client jira.JiraCl
 	return nil
 }
 
-func roundAdnChoiceAvailableSecondsToSpent(i, length, neededSpentSeconds, secondsToSpent int) int {
+func CalculateTimeInTempo(daysRs jira.DaysSearchRs, jiraClient jira.JiraClient) (int, int, error) {
+	targetSpentSeconds := daysRs[0].Days[0].RequiredSeconds
+	if targetSpentSeconds <= 0 {
+		log.Fatalf("requiredSeconds = %d. Today is not-working day!", targetSpentSeconds)
+	}
+	log.Printf("Target time to spend = %dsec (%d hours)", targetSpentSeconds, ConvertSecondsToHours(targetSpentSeconds))
+
+	findsRs, err := jiraClient.Find(time.Now())
+	if err != nil {
+		return 0, 0, err
+	}
+
+	var totalSpentSeconds int
+	for _, f := range findsRs {
+		totalSpentSeconds += f.TimeSpentSeconds
+	}
+	log.Printf("Already spent time = %dsec (%d hours)", totalSpentSeconds, ConvertSecondsToHours(totalSpentSeconds))
+	return targetSpentSeconds, totalSpentSeconds, nil
+}
+
+func choiceAvailableSecondsToSpent(i, length, neededSpentSeconds, secondsToSpent int) int {
 	if i == length-1 {
+		return neededSpentSeconds
+	} else if neededSpentSeconds < secondsToSpent {
 		return neededSpentSeconds
 	} else {
 		return secondsToSpent

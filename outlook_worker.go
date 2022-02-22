@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"strings"
 	"tempo-loger/pkg/enviroment"
 	"tempo-loger/pkg/jira"
 	"tempo-loger/pkg/outlook"
@@ -24,10 +25,22 @@ func process(env *enviroment.Environment, createParams *[]jira.CreateParams) err
 	if err != nil {
 		log.Fatal("Error while getting outlook events: ", err)
 	}
+	filterEvents(&outlookEvents)
 	if err := prepare(outlookEvents, *env, createParams); err != nil {
 		return err
 	}
 	return nil
+}
+
+func filterEvents(rs *outlook.EventsRs) {
+	for i, val := range rs.Value {
+		if "organizer" != strings.ToLower(val.ResponseStatus.Response) &&
+			"accepted" != strings.ToLower(val.ResponseStatus.Response) &&
+			"tentativelyaccepted" != strings.ToLower(val.ResponseStatus.Response) {
+			rs.Value = append(rs.Value[:i], rs.Value[i+1:]...)
+			i--
+		}
+	}
 }
 
 func prepare(outlookEvents outlook.EventsRs, env enviroment.Environment, createParams *[]jira.CreateParams) error {

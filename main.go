@@ -18,7 +18,7 @@ func main() {
 	defer func(logFile *os.File) {
 		err := logFile.Close()
 		if err != nil {
-
+			log.Fatal(err)
 		}
 	}(logFile)
 	log.SetOutput(logFile)
@@ -45,23 +45,11 @@ func main() {
 	if err != nil {
 		log.Fatal("Error while sending GetDayInfo-request: ", err)
 	}
-	if daysRs[0].Days[0].Type != "WORKING_DAY" {
-		log.Fatal("Today is not-working day!")
-	}
-	targetSpentSeconds := daysRs[0].Days[0].RequiredSeconds
-	log.Printf("Target time to spend = %dsec (%d hours)", targetSpentSeconds, service.ConvertSecondsToHours(targetSpentSeconds))
 
-	findsRs, err := jiraClient.Find(time.Now())
+	targetSpentSeconds, totalSpentSeconds, err := service.CalculateTimeInTempo(daysRs, jiraClient)
 	if err != nil {
-		log.Fatal("Error while sending Finds-request: ", err)
+		log.Fatal("Error while calculate targetSpentSeconds and totalSpentSeconds: ", err)
 	}
-
-	var totalSpentSeconds int
-	for _, f := range findsRs {
-		totalSpentSeconds += f.TimeSpentSeconds
-	}
-	log.Printf("Already spent time = %dsec (%d hours)", totalSpentSeconds, service.ConvertSecondsToHours(totalSpentSeconds))
-
 	if err := service.ProcessParams(totalSpentSeconds, targetSpentSeconds, jiraClient, createParams); err != nil {
 		log.Fatal("Error while process prepared worklogs slice: ", err)
 	} else {
