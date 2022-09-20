@@ -1,4 +1,4 @@
-package enviroment
+package environment
 
 import (
 	"errors"
@@ -111,7 +111,7 @@ func validate(env *Environment) error {
 }
 
 func genEnvErrMessage(envName string) string {
-	return fmt.Sprintf("Enviroment value \"%s\" is empty", envName)
+	return fmt.Sprintf("Environment value \"%s\" is empty", envName)
 }
 
 func validateWorklogItems(worklog string) error {

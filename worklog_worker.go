@@ -4,13 +4,13 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
-	"tempo-loger/pkg/enviroment"
+	"tempo-loger/pkg/environment"
 	"tempo-loger/pkg/jira"
 	"tempo-loger/pkg/service"
 	"time"
 )
 
-func processWorklogs(env enviroment.Environment, createParams *[]jira.CreateParams) error {
+func processWorklogs(env environment.Environment, createParams *[]jira.CreateParams) error {
 	worklogs := strings.Split(env.Worklog, ";")
 	r := rand.New(rand.NewSource(time.Now().Unix()))
 	for _, i := range r.Perm(len(worklogs)) {

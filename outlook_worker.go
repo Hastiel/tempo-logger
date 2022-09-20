@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	"tempo-loger/pkg/enviroment"
+	"tempo-loger/pkg/environment"
 	"tempo-loger/pkg/jira"
 	"tempo-loger/pkg/outlook"
 	"tempo-loger/pkg/service"
 	"time"
 )
 
-func process(env *enviroment.Environment, createParams *[]jira.CreateParams) error {
+func process(env *environment.Environment, createParams *[]jira.CreateParams) error {
 	outlookClient := outlook.New(env.Login, env.Password, env.OutlookUrl, env.OutlookEventPath)
 	startDate, err := concatCurrantDateWithTime("00:00:00")
 	if err != nil {
@@ -43,7 +43,7 @@ func filterEvents(rs *outlook.EventsRs) {
 	}
 }
 
-func prepare(outlookEvents outlook.EventsRs, env enviroment.Environment, createParams *[]jira.CreateParams) error {
+func prepare(outlookEvents outlook.EventsRs, env environment.Environment, createParams *[]jira.CreateParams) error {
 	if len(outlookEvents.Value) > 0 {
 		for _, val := range outlookEvents.Value {
 			jiraTicket := service.ExtractTicketFromBody(val.Body.Content, env.JiraUrl)

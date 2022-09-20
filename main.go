@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"tempo-loger/pkg/enviroment"
+	"tempo-loger/pkg/environment"
 	"tempo-loger/pkg/jira"
 	"tempo-loger/pkg/service"
 	"time"
@@ -23,7 +23,7 @@ func main() {
 	}(logFile)
 	log.SetOutput(logFile)
 
-	env, err := enviroment.NewEnvironment()
+	env, err := environment.NewEnvironment()
 	if err != nil {
 		log.Fatal("Error while loading .env file: ", err)
 	}
