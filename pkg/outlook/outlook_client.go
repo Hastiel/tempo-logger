@@ -57,7 +57,5 @@ func (o *outlookClient) GetEvents(startDate, endDate time.Time) (EventsRs, error
 	if err = json.Unmarshal(rsBody, &eventsRs); err != nil {
 		return eventsRs, err
 	}
-	bodyString := string(rsBody)
-	log.Println(bodyString)
 	return eventsRs, nil
 }

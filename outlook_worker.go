@@ -33,10 +33,10 @@ func process(env *environment.Environment, createParams *[]jira.CreateParams) er
 }
 
 func filterEvents(rs *outlook.EventsRs) {
-	for i, val := range rs.Value {
-		if "organizer" != strings.ToLower(val.ResponseStatus.Response) &&
-			"accepted" != strings.ToLower(val.ResponseStatus.Response) &&
-			"tentativelyaccepted" != strings.ToLower(val.ResponseStatus.Response) {
+	for i := 0; i < len(rs.Value); i++ {
+		if "organizer" != strings.ToLower(rs.Value[i].ResponseStatus.Response) &&
+			"accepted" != strings.ToLower(rs.Value[i].ResponseStatus.Response) &&
+			"tentativelyaccepted" != strings.ToLower(rs.Value[i].ResponseStatus.Response) {
 			rs.Value = append(rs.Value[:i], rs.Value[i+1:]...)
 			i--
 		}
